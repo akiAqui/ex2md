@@ -1,0 +1,100 @@
+1) --verbose は -vでもいいようにして
+2) --sheet  -sで読み込むシート名とセルの範囲を含んだをカンマ区切りで羅列できるようにする
+3) --number -n で読み込むシート番号を m-n,k,jのように範囲と数字のカンマ区切りで指定する
+
+プログラムアーキテクチャとして
+- 2,3,実現するために、シート番号もしくはシート名とシート内の対称範囲を要素に持つ配列を持つことにします。
+- この変数をexcel_sheetsとします。
+
+引数指定とともに変数に値が入った例を示します（もしかすると書き間違いなどが含まれるかもしれないです）
+例１：シートが指定されなかったときは、すべてのシートの意味 -s, -n の指定がなし
+{
+ sheets: []
+}
+
+
+例２：シート番号が指定されたとき、範囲は指定されていなのでpandasの判断に任せられている -n 3-4,8
+{
+ sheets: [
+  {
+   "sheet": 3,
+   "rage" : "",
+  },
+  {
+   "sheet": 4,
+   "rage" : "",
+  },
+  {
+   "sheet": 8,
+   "rage" : "",
+  }
+  
+ ]
+}
+
+例３：シート名と範囲が示されているものがあるとき、範囲が指定されていればその範囲に限って読み込み
+     -s "sheetNameOne!C4:E8", "sheetName Two!A4-Z9", "s h e e t"
+{
+ sheets: [
+  {
+   "sheet": "sheetNameOne",
+   "rage" : "C4:E8",
+  },
+  {
+   "sheet": "sheetName Two",
+   "rage" : "A4-Z9",
+  },
+  {
+   "sheet": "s h e e t",
+   "rage" : "",
+  }
+ ]
+}
+
+
+
+3）のシート番号文字列の解析関数を作って変数excel_sheetsに値設定できるようにすること。しかしシート番号で指定されても出力ファイルはシート名を利用すること
+
+4）のカンマ区切りのシート名と（もしあれば）範囲を指定された文字列を解析する関数を作って、excel_sheetsに値設定できるようにすること
+　そのために範囲指定が列、行ともに小さいものから大きいものになっているかをチェックする関数range_checkerを作ってチェックしエラー処理すること
+
+シート名もしくはシート番号が存在しない場合は後述のエラー処理で対応すること
+
+2),3)は同時に指定されたらエラー。どちらかの指定にしろ、という旨のエラーをだすこと
+
+
+4)の範囲指定からpandasでExcelを読み込むときは、excel_range_to_paramsという範囲指定ができる関数を作ったので、これを利用してただし、範囲が正しいかのチェックができていないのでrange_checkerをどう使うか必要かを考えて
+
+
+
+エラー処理
+ファイルオープン時のエラーに対応して
+例）
+try:
+    df = pd.read_excel('path/to/excel/file.xlsx')
+except FileNotFoundError:
+    print("File not found. Please provide a valid file path.")
+
+シート指定されたときに見つからないエラー処理をして
+例）
+try:
+    df = pd.read_excel('path/to/excel/file.xlsx', sheet_name='Sheet1')
+except pd.errors.XLRDError as e:
+    print(f"Error reading sheet: {e}")
+
+ファイルを読み込んでメモリエラーに対応して
+例）
+try:
+    df = pd.read_excel('path/to/excel/file.xlsx', chunksize=1000)
+except MemoryError:
+    print("Insufficient memory. Consider reading the file in smaller chunks.")
+
+一般的なエラーにも対応して
+例）
+try:
+    df = pd.read_excel('path/to/excel/file.xlsx')
+    sheet_names = df.sheet_names
+    print(sheet_names)
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
+    
